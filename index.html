@@ -133,6 +133,9 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
 }
 .action-btn:hover{border-color:var(--blue);background:var(--lightBlue);}
 .action-btn .ab-icon{font-size:20px;display:block;margin-bottom:3px;}
+.action-btn.recording{border-color:#DC2626;background:#FEE2E2;color:#DC2626;animation:recpulse 1s infinite;}
+.action-btn.recorded{border-color:var(--green);background:var(--lightGreen);color:var(--green);}
+@keyframes recpulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 
 /* ── PROGRESS BAR TOP ───────────────────────────────────────────── */
 .progress-bar-wrap{background:var(--lightGray);height:6px;border-radius:3px;margin-bottom:20px;}
@@ -841,8 +844,8 @@ function renderSentences(){
     <div class="grammar-box">📐 ${s.grammar}</div>
     <div class="caution-box">⚠ ${s.caution}</div>
     <div class="action-row">
-      <button class="action-btn" id="btn-listen" onclick="speakKorean(SENTENCES[currentSentenceIdx].ko2, this)"><span class="ab-icon">🔊</span>듣기</button>
-      <button class="action-btn" onclick="toast('🎙 녹음 시작 (v0.3에서 구현)')"><span class="ab-icon">🎙</span>말하기</button>
+      <button class="action-btn" id="btn-listen" onclick="playListen(this)"><span class="ab-icon">🔊</span>듣기</button>
+      <button class="action-btn" id="btn-speak" onclick="toggleRecord(this)"><span class="ab-icon">🎙</span>말하기</button>
       <button class="action-btn" onclick="go('s6')"><span class="ab-icon">✏️</span>문제</button>
       <button class="action-btn" onclick="toggleFav('${s.id}',this)"><span class="ab-icon">${favs.has(s.id)?'💛':'🤍'}</span>저장</button>
     </div>
@@ -850,6 +853,7 @@ function renderSentences(){
       <span class="chip">${s.domain}</span>
       <span class="v-badge">${s.status}</span>
     </div>`;
+  updateSpeakBtn();
 }
 function prevSentence(){if(currentSentenceIdx>0){currentSentenceIdx--;renderSentences();}}
 function nextSentence(){
@@ -1000,6 +1004,105 @@ function renderKit(){
       </div>
       <input type="checkbox" class="kit-chk" checked>
     </div>`).join('');
+}
+
+// ── RECORDING ────────────────────────────────────────────────────────────────
+var _recordings = {};      // sentenceId → Blob URL
+var _mediaRecorder = null;
+var _recChunks = [];
+var _recTimer = null;
+
+function currentSentenceId(){
+  return SENTENCES[currentSentenceIdx] ? SENTENCES[currentSentenceIdx].id : null;
+}
+
+function toggleRecord(btn){
+  if(_mediaRecorder && _mediaRecorder.state === 'recording'){
+    stopRecord(btn);
+  } else {
+    startRecord(btn);
+  }
+}
+
+function startRecord(btn){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    toast('이 브라우저는 마이크를 지원하지 않습니다.'); return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    _recChunks = [];
+    _mediaRecorder = new MediaRecorder(stream);
+    _mediaRecorder.ondataavailable = function(e){ if(e.data.size>0) _recChunks.push(e.data); };
+    _mediaRecorder.onstop = function(){
+      var blob = new Blob(_recChunks, {type:'audio/webm'});
+      var sid = currentSentenceId();
+      if(sid){
+        // 이전 URL 해제
+        if(_recordings[sid]) URL.revokeObjectURL(_recordings[sid]);
+        _recordings[sid] = URL.createObjectURL(blob);
+      }
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      // 버튼 상태: 녹음 완료
+      btn.classList.remove('recording');
+      btn.classList.add('recorded');
+      btn.querySelector('.ab-icon').textContent = '✅';
+      btn.lastChild.textContent = '내 목소리';
+      // 듣기 버튼도 내 목소리 표시
+      var lb = document.getElementById('btn-listen');
+      if(lb){ lb.querySelector('.ab-icon').textContent = '🎤'; }
+      toast('녹음 완료! 듣기 버튼으로 확인하세요 🎤');
+    };
+    _mediaRecorder.start();
+    // 버튼 상태: 녹음 중
+    btn.classList.add('recording');
+    btn.querySelector('.ab-icon').textContent = '⏹';
+    btn.lastChild.textContent = '중지';
+    // 최대 8초 자동 종료
+    _recTimer = setTimeout(function(){ if(_mediaRecorder && _mediaRecorder.state==='recording') stopRecord(btn); }, 8000);
+    toast('🎙 녹음 중... 말하고 다시 눌러 중지하세요');
+  }).catch(function(){
+    toast('마이크 권한을 허용해 주세요.');
+  });
+}
+
+function stopRecord(btn){
+  clearTimeout(_recTimer);
+  if(_mediaRecorder && _mediaRecorder.state === 'recording') _mediaRecorder.stop();
+}
+
+// 듣기: 녹음 있으면 내 목소리, 없으면 TTS
+function playListen(btn){
+  var sid = currentSentenceId();
+  var recUrl = sid ? _recordings[sid] : null;
+  if(recUrl){
+    if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio=null; }
+    btn.style.opacity='0.5'; btn.disabled=true;
+    var audio = new Audio(recUrl);
+    _ttsAudio = audio;
+    audio.onended = function(){ _ttsAudio=null; btn.style.opacity='1'; btn.disabled=false; };
+    audio.onerror = function(){ _ttsAudio=null; btn.style.opacity='1'; btn.disabled=false; toast('녹음 재생 오류'); };
+    audio.play().catch(function(){ btn.style.opacity='1'; btn.disabled=false; });
+  } else {
+    speakKorean(SENTENCES[currentSentenceIdx].ko2, btn);
+  }
+}
+
+// 화면 전환 시 녹음 상태 버튼 반영
+function updateSpeakBtn(){
+  var sid = currentSentenceId();
+  var lb = document.getElementById('btn-listen');
+  var sb = document.getElementById('btn-speak');
+  if(!lb||!sb) return;
+  if(sid && _recordings[sid]){
+    lb.querySelector('.ab-icon').textContent='🎤';
+    sb.classList.add('recorded');
+    sb.querySelector('.ab-icon').textContent='✅';
+    sb.lastChild.textContent='내 목소리';
+  } else {
+    lb.querySelector('.ab-icon').textContent='🔊';
+    sb.classList.remove('recorded','recording');
+    sb.querySelector('.ab-icon').textContent='🎙';
+    sb.lastChild.textContent='말하기';
+  }
 }
 
 // ── TTS ──────────────────────────────────────────────────────────────────────
