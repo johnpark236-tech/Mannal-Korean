@@ -1004,27 +1004,61 @@ function renderKit(){
 
 // ── TTS ──────────────────────────────────────────────────────────────────────
 const LANG_BCP47 = {ko:'ko-KR', vi:'vi-VN', uz:'uz-UZ', mn:'mn-MN', zh:'zh-CN', en:'en-US'};
+// 브라우저 음성 지원 여부 캐시
+var _voiceCache = null;
+function getVoices(){
+  if(_voiceCache && _voiceCache.length) return _voiceCache;
+  _voiceCache = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  return _voiceCache;
+}
+// 해당 BCP-47 코드의 음성이 실제 존재하는지 확인
+function hasVoice(bcp47){
+  var prefix = bcp47.split('-')[0].toLowerCase();
+  return getVoices().some(function(v){
+    return v.lang.toLowerCase().startsWith(prefix);
+  });
+}
+// 지원 언어별 음성 없을 때 안내 메시지
+const LANG_NOSUPPORT = {
+  mn:'몽골어 음성이 이 기기에서 지원되지 않습니다.\n한국어만 재생합니다.',
+  uz:'우즈베크어 음성이 이 기기에서 지원되지 않습니다.\n한국어만 재생합니다.'
+};
 
 function speakSequence(items, btn){
-  // items: [{text, lang}, ...]
   if(!window.speechSynthesis){toast('이 브라우저는 음성을 지원하지 않습니다.');return;}
   window.speechSynthesis.cancel();
   if(btn){btn.style.opacity='0.5';btn.disabled=true;}
   var idx=0;
+  var timer=null;
+  function unlock(){
+    clearTimeout(timer);
+    if(btn){btn.style.opacity='1';btn.disabled=false;}
+  }
   function next(){
-    if(idx>=items.length){
-      if(btn){btn.style.opacity='1';btn.disabled=false;}
-      return;
-    }
+    clearTimeout(timer);
+    if(idx>=items.length){unlock();return;}
     var item=items[idx++];
     if(!item.text||item.text==='[한국어 기준]'){next();return;}
+    // 음성 미지원 언어는 건너뜀
+    if(item.lang!=='ko-KR' && !hasVoice(item.lang)){next();return;}
     var u=new SpeechSynthesisUtterance(item.text);
     u.lang=item.lang; u.rate=0.85; u.pitch=1;
     u.onend=next;
-    u.onerror=function(){if(btn){btn.style.opacity='1';btn.disabled=false;}};
+    u.onerror=next;  // 오류 시에도 다음으로 진행
+    // 10초 타임아웃 (onend 미발생 시 강제 해제)
+    timer=setTimeout(function(){window.speechSynthesis.cancel();unlock();}, 10000);
     window.speechSynthesis.speak(u);
   }
-  next();
+  // getVoices()가 비동기로 채워지는 경우 대비해 약간 딜레이 후 시작
+  if(getVoices().length===0){
+    window.speechSynthesis.onvoiceschanged=function(){
+      _voiceCache=window.speechSynthesis.getVoices();
+      next();
+    };
+    setTimeout(next, 300); // 300ms 내 이벤트 없으면 그냥 실행
+  } else {
+    next();
+  }
 }
 
 function speakKorean(koText, btn){
