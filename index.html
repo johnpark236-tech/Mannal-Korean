@@ -18,8 +18,8 @@
   --radius:16px; --shadow:0 4px 24px rgba(27,58,107,.10);
 }
 html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;background:#F0F4FA;color:var(--black);}
-.screen{display:none;min-height:100vh;flex-direction:column;}
-.screen.active{display:flex;}
+.screen{display:none !important;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex !important;}
 
 /* ── HEADER ────────────────────────────────────────────────────── */
 .app-header{
@@ -722,8 +722,13 @@ let favs = new Set();
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function go(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('active');
+    s.style.display='none';
+  });
+  var target=document.getElementById(id);
+  target.classList.add('active');
+  target.style.display='flex';
   window.scrollTo(0,0);
   if(id==='s2')renderPurposes();
   if(id==='s3')renderDomains();
@@ -994,7 +999,23 @@ function renderKit(){
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
-renderField();
+function initApp(){
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('active');
+    s.style.display='none';
+  });
+  var s1 = document.getElementById('s1');
+  if(s1){
+    s1.classList.add('active');
+    s1.style.display='flex';
+  }
+  renderField();
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 </script>
 </body>
 </html>
