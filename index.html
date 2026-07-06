@@ -866,6 +866,17 @@ function toggleFav(id,btn){
 }
 
 // ── SCREEN 6: QUIZ ───────────────────────────────────────────────────────────
+function detectLang(text){
+  return /[가-힣]/.test(text) ? 'ko' : 'en';
+}
+function speakQuiz(btn){
+  var q=QUIZ_DATA[quizIdx];
+  var items=[{text:q.q, lang:'ko'}];
+  ['1번.','2번.','3번.','4번.'].forEach(function(num,i){
+    items.push({text:num+' '+q.opts[i], lang:detectLang(q.opts[i])});
+  });
+  speakSequence(items, btn);
+}
 function renderQuiz(){
   const total=QUIZ_DATA.length;
   const q=QUIZ_DATA[quizIdx];
@@ -874,7 +885,10 @@ function renderQuiz(){
   quizAnswered=false;
   document.getElementById('quiz-area').innerHTML=`
     <div class="quiz-context">${q.ctx}</div>
-    <div class="quiz-question">${q.q}</div>
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;">
+      <div class="quiz-question" style="flex:1;margin-bottom:0">${q.q}</div>
+      <button onclick="speakQuiz(this)" style="flex-shrink:0;padding:8px 12px;border:1.5px solid var(--midGray);border-radius:10px;background:var(--white);cursor:pointer;font-size:13px;color:var(--navy);display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all .15s;"><span style="font-size:16px">🔊</span>듣기</button>
+    </div>
     <div class="quiz-options">
       ${q.opts.map((o,i)=>`<button class="quiz-option" onclick="answerQuiz(${i})">${i+1}. ${o}</button>`).join('')}
     </div>
