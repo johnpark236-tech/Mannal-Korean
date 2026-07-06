@@ -953,16 +953,20 @@ const FIELD_CATS=[
   {code:'legal',label:'⚖️ 경찰·법원'},
   {code:'administration',label:'🏛️ 행정'},
 ];
+var _fieldData=[];
 function renderField(){
   const catsEl=document.getElementById('field-cats');
   catsEl.innerHTML=FIELD_CATS.map(c=>`<button class="field-cat ${c.code===fieldCat?'active':''}" onclick="setFieldCat('${c.code}')">${c.label}</button>`).join('');
   const q=document.getElementById('field-input').value.trim().toLowerCase();
   let data=FIELD_DATA.filter(s=>fieldCat==='all'||s.domain===fieldCat);
   if(q)data=data.filter(s=>s.ko1.includes(q)||s.ko2.includes(q)||(s.trans.en&&s.trans.en.toLowerCase().includes(q)));
+  _fieldData=data;
   document.getElementById('field-count').textContent=`${data.length}개 결과`;
-  document.getElementById('field-results').innerHTML=data.map(s=>{
+  const langLabel=currentLang==='ko'?'EN':LANG_LABELS[currentLang]||'번역';
+  document.getElementById('field-results').innerHTML=data.map((s,i)=>{
     const tr=s.trans[currentLang]||s.trans.en;
     const isFav=favs.has(s.id);
+    const speakLabel=currentLang==='ko'?'🔊 KO':'🔊 KO+'+langLabel;
     return `<div class="field-result">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <span class="field-tag">${s.scenario}</span>
@@ -971,7 +975,7 @@ function renderField(){
       <div class="field-ko">${s.ko2}</div>
       <div class="field-en">${currentLang==='ko'?s.trans.en:tr}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <button onclick="speakKorean('${s.ko2}', this)" style="background:none;border:1.5px solid var(--midGray);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--navy)">🔊 듣기</button>
+        <button onclick="speakField(${i},this)" style="background:none;border:1.5px solid var(--midGray);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--navy)">${speakLabel}</button>
         <button class="fav-btn" onclick="toggleFieldFav('${s.id}',this)">${isFav?'💛':'🤍'}</button>
       </div>
     </div>`;
@@ -999,20 +1003,51 @@ function renderKit(){
 }
 
 // ── TTS ──────────────────────────────────────────────────────────────────────
-function speakKorean(text, btn){
+const LANG_BCP47 = {ko:'ko-KR', vi:'vi-VN', uz:'uz-UZ', mn:'mn-MN', zh:'zh-CN', en:'en-US'};
+
+function speakSequence(items, btn){
+  // items: [{text, lang}, ...]
   if(!window.speechSynthesis){toast('이 브라우저는 음성을 지원하지 않습니다.');return;}
   window.speechSynthesis.cancel();
-  var utter=new SpeechSynthesisUtterance(text);
-  utter.lang='ko-KR';
-  utter.rate=0.9;
-  utter.pitch=1;
-  if(btn){
-    btn.style.opacity='0.5';
-    btn.disabled=true;
-    utter.onend=function(){btn.style.opacity='1';btn.disabled=false;};
-    utter.onerror=function(){btn.style.opacity='1';btn.disabled=false;};
+  if(btn){btn.style.opacity='0.5';btn.disabled=true;}
+  var idx=0;
+  function next(){
+    if(idx>=items.length){
+      if(btn){btn.style.opacity='1';btn.disabled=false;}
+      return;
+    }
+    var item=items[idx++];
+    if(!item.text||item.text==='[한국어 기준]'){next();return;}
+    var u=new SpeechSynthesisUtterance(item.text);
+    u.lang=item.lang; u.rate=0.85; u.pitch=1;
+    u.onend=next;
+    u.onerror=function(){if(btn){btn.style.opacity='1';btn.disabled=false;}};
+    window.speechSynthesis.speak(u);
   }
-  window.speechSynthesis.speak(utter);
+  next();
+}
+
+function speakKorean(koText, btn){
+  // 문장 카드: 현재 선택 언어 기준으로 재생
+  var s=SENTENCES[currentSentenceIdx];
+  var items=[{text:koText, lang:'ko-KR'}];
+  if(currentLang!=='ko'){
+    var tr=s.trans[currentLang]||s.trans.en;
+    items.push({text:tr, lang:LANG_BCP47[currentLang]||'en-US'});
+  }
+  speakSequence(items, btn);
+}
+
+function speakField(idx, btn){
+  // 현장 모드: _fieldData 배열의 idx번째 항목 재생
+  var s=_fieldData[idx];
+  if(!s)return;
+  var items=[{text:s.ko2, lang:'ko-KR'}];
+  if(currentLang!=='ko'){
+    var tr=s.trans[currentLang]||s.trans.en;
+    items.push({text:tr, lang:LANG_BCP47[currentLang]||'en-US'});
+  }
+  speakSequence(items, btn);
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
