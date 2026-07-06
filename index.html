@@ -885,10 +885,8 @@ function renderQuiz(){
   quizAnswered=false;
   document.getElementById('quiz-area').innerHTML=`
     <div class="quiz-context">${q.ctx}</div>
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;">
-      <div class="quiz-question" style="flex:1;margin-bottom:0">${q.q}</div>
-      <button onclick="speakQuiz(this)" style="flex-shrink:0;padding:8px 12px;border:1.5px solid var(--midGray);border-radius:10px;background:var(--white);cursor:pointer;font-size:13px;color:var(--navy);display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all .15s;"><span style="font-size:16px">🔊</span>듣기</button>
-    </div>
+    <div class="quiz-question">${q.q}</div>
+    <button onclick="speakQuiz(this)" style="width:100%;margin-bottom:16px;padding:10px;border:1.5px solid var(--blue);border-radius:10px;background:var(--lightBlue);cursor:pointer;font-size:14px;font-weight:600;color:var(--navy);display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;"><span style="font-size:18px">🔊</span>문제 + 보기 듣기</button>
     <div class="quiz-options">
       ${q.opts.map((o,i)=>`<button class="quiz-option" onclick="answerQuiz(${i})">${i+1}. ${o}</button>`).join('')}
     </div>
