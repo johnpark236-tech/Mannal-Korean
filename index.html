@@ -1117,49 +1117,43 @@ function updateSpeakBtn(){
   }
 }
 
-// ── TTS ──────────────────────────────────────────────────────────────────────
-// Google Translate TTS 언어 코드 (자연스러운 신경망 음성, 무료·키 없음)
-const GTTS_LANG = {ko:'ko', vi:'vi', uz:'uz', mn:'mn', zh:'zh-CN', en:'en'};
-// Web Speech API BCP-47 (한국어 폴백용)
+// ── TTS (Web Speech API) ──────────────────────────────────────────────────────
 const LANG_BCP47 = {ko:'ko-KR', vi:'vi-VN', uz:'uz-UZ', mn:'mn-MN', zh:'zh-CN', en:'en-US'};
 
-var _ttsAudio = null; // 현재 재생 중인 Audio 인스턴스
-
-// Google Translate TTS URL 생성 (무료, API 키 불필요)
-function gttsUrl(text, lang){
-  return 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&ttsspeed=0.9'
-    + '&tl=' + encodeURIComponent(lang)
-    + '&q='  + encodeURIComponent(text);
+// 언어별 최적 음성 선택 (Google/Microsoft 음성 우선)
+function getBestVoice(bcp47){
+  if(!window.speechSynthesis) return null;
+  var voices = window.speechSynthesis.getVoices();
+  if(!voices.length) return null;
+  var prefix = bcp47.split('-')[0].toLowerCase();
+  var matched = voices.filter(function(v){ return v.lang.toLowerCase().startsWith(prefix); });
+  if(!matched.length) return null;
+  // Google → Microsoft → 그 외 순서로 우선 선택
+  return matched.find(function(v){ return v.name.toLowerCase().includes('google'); })
+      || matched.find(function(v){ return v.name.toLowerCase().includes('microsoft'); })
+      || matched[0];
 }
 
-// 한 항목을 Audio로 재생, 성공 시 onDone, 실패 시 onFail 호출
-function playGtts(text, langCode, onDone, onFail){
-  if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio=null; }
-  var url = gttsUrl(text, GTTS_LANG[langCode]||langCode);
-  var audio = new Audio(url);
-  _ttsAudio = audio;
-  audio.onended = function(){ _ttsAudio=null; onDone(); };
-  audio.onerror = function(){ _ttsAudio=null; onFail(); };
-  var p = audio.play();
-  if(p && typeof p.catch==='function') p.catch(onFail);
-}
-
-// Web Speech API로 한 항목 재생 (한국어 전용, 또는 gtts 실패 폴백)
-function playWsa(text, bcp47, onDone){
+// 항목 1개 재생 후 onDone 호출 (10초 타임아웃)
+function playOne(text, bcp47, onDone){
   if(!window.speechSynthesis){ onDone(); return; }
   window.speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
-  u.lang=bcp47; u.rate=0.85; u.pitch=1;
-  u.onend=onDone; u.onerror=onDone;
-  var timer=setTimeout(function(){ window.speechSynthesis.cancel(); onDone(); }, 10000);
-  u.onend=function(){ clearTimeout(timer); onDone(); };
-  u.onerror=function(){ clearTimeout(timer); onDone(); };
+  u.lang = bcp47;
+  u.rate = 0.88;
+  u.pitch = 1;
+  var voice = getBestVoice(bcp47);
+  if(voice) u.voice = voice;
+  var done = false;
+  var timer = setTimeout(function(){ if(!done){ done=true; window.speechSynthesis.cancel(); onDone(); } }, 10000);
+  u.onend  = function(){ if(!done){ done=true; clearTimeout(timer); onDone(); } };
+  u.onerror = function(){ if(!done){ done=true; clearTimeout(timer); onDone(); } };
   window.speechSynthesis.speak(u);
 }
 
-// 순차 재생: items = [{text, lang}]
-// lang: 앱 언어 코드 (ko/vi/uz/mn/zh/en)
+// 순차 재생: items = [{text, lang}]  lang: ko/vi/uz/mn/zh/en
 function speakSequence(items, btn){
+  if(!window.speechSynthesis){ toast('이 브라우저는 음성을 지원하지 않습니다.'); return; }
   if(btn){ btn.style.opacity='0.5'; btn.disabled=true; }
   function unlock(){ if(btn){ btn.style.opacity='1'; btn.disabled=false; } }
   var idx=0;
@@ -1167,22 +1161,26 @@ function speakSequence(items, btn){
     if(idx>=items.length){ unlock(); return; }
     var item=items[idx++];
     if(!item.text||item.text==='[한국어 기준]'){ next(); return; }
-    if(item.lang==='ko'){
-      // 한국어: Web Speech API (품질 좋음)
-      playWsa(item.text, 'ko-KR', next);
-    } else {
-      // 외국어: Google Translate TTS → 실패 시 Web Speech API 폴백
-      playGtts(item.text, item.lang, next, function(){
-        playWsa(item.text, LANG_BCP47[item.lang]||'en-US', next);
-      });
+    var bcp47 = LANG_BCP47[item.lang] || 'en-US';
+    // 음성 없는 언어는 건너뜀 (단 한국어·영어는 항상 시도)
+    if(item.lang!=='ko' && item.lang!=='en'){
+      var v = getBestVoice(bcp47);
+      if(!v){ next(); return; }
     }
+    playOne(item.text, bcp47, next);
   }
-  next();
+  // getVoices() 비동기 로딩 대비
+  if(window.speechSynthesis.getVoices().length===0){
+    window.speechSynthesis.onvoiceschanged = function(){ next(); };
+    setTimeout(next, 400);
+  } else {
+    next();
+  }
 }
 
 function speakKorean(koText, btn){
-  var s=SENTENCES[currentSentenceIdx];
-  var items=[{text:koText, lang:'ko'}];
+  var s = SENTENCES[currentSentenceIdx];
+  var items = [{text:koText, lang:'ko'}];
   if(currentLang!=='ko'){
     items.push({text:s.trans[currentLang]||s.trans.en, lang:currentLang});
   }
@@ -1190,9 +1188,9 @@ function speakKorean(koText, btn){
 }
 
 function speakField(idx, btn){
-  var s=_fieldData[idx];
-  if(!s)return;
-  var items=[{text:s.ko2, lang:'ko'}];
+  var s = _fieldData[idx];
+  if(!s) return;
+  var items = [{text:s.ko2, lang:'ko'}];
   if(currentLang!=='ko'){
     items.push({text:s.trans[currentLang]||s.trans.en, lang:currentLang});
   }
