@@ -841,7 +841,7 @@ function renderSentences(){
     <div class="grammar-box">📐 ${s.grammar}</div>
     <div class="caution-box">⚠ ${s.caution}</div>
     <div class="action-row">
-      <button class="action-btn" onclick="toast('🔊 음성 재생 (v0.3에서 구현)')"><span class="ab-icon">🔊</span>듣기</button>
+      <button class="action-btn" id="btn-listen" onclick="speakKorean(SENTENCES[currentSentenceIdx].ko2, this)"><span class="ab-icon">🔊</span>듣기</button>
       <button class="action-btn" onclick="toast('🎙 녹음 시작 (v0.3에서 구현)')"><span class="ab-icon">🎙</span>말하기</button>
       <button class="action-btn" onclick="go('s6')"><span class="ab-icon">✏️</span>문제</button>
       <button class="action-btn" onclick="toggleFav('${s.id}',this)"><span class="ab-icon">${favs.has(s.id)?'💛':'🤍'}</span>저장</button>
@@ -971,7 +971,7 @@ function renderField(){
       <div class="field-ko">${s.ko2}</div>
       <div class="field-en">${currentLang==='ko'?s.trans.en:tr}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <button onclick="toast('🔊 음성 재생')" style="background:none;border:1.5px solid var(--midGray);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--navy)">🔊 듣기</button>
+        <button onclick="speakKorean('${s.ko2}', this)" style="background:none;border:1.5px solid var(--midGray);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--navy)">🔊 듣기</button>
         <button class="fav-btn" onclick="toggleFieldFav('${s.id}',this)">${isFav?'💛':'🤍'}</button>
       </div>
     </div>`;
@@ -996,6 +996,23 @@ function renderKit(){
       </div>
       <input type="checkbox" class="kit-chk" checked>
     </div>`).join('');
+}
+
+// ── TTS ──────────────────────────────────────────────────────────────────────
+function speakKorean(text, btn){
+  if(!window.speechSynthesis){toast('이 브라우저는 음성을 지원하지 않습니다.');return;}
+  window.speechSynthesis.cancel();
+  var utter=new SpeechSynthesisUtterance(text);
+  utter.lang='ko-KR';
+  utter.rate=0.9;
+  utter.pitch=1;
+  if(btn){
+    btn.style.opacity='0.5';
+    btn.disabled=true;
+    utter.onend=function(){btn.style.opacity='1';btn.disabled=false;};
+    utter.onerror=function(){btn.style.opacity='1';btn.disabled=false;};
+  }
+  window.speechSynthesis.speak(utter);
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
