@@ -1285,25 +1285,18 @@ function speakField(idx, btn){
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
-async function initApp(){
-  // 화면 먼저 표시 (로딩 중에도 첫 화면 보이게)
-  document.querySelectorAll('.screen').forEach(s=>{
+function initApp(){
+  document.querySelectorAll('.screen').forEach(function(s){
     s.classList.remove('active');
     s.style.display='none';
   });
-  var s1 = document.getElementById('s1');
-  if(s1){
-    s1.classList.add('active');
-    s1.style.display='flex';
-  }
-  // CSV 데이터 로딩
-  await loadCSVData();
-  // 현장모드 초기화
+  var s1=document.getElementById('s1');
+  if(s1){s1.classList.add('active');s1.style.display='flex';}
   renderField();
 }
 if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
+  document.addEventListener('DOMContentLoaded',initApp);
+}else{
   initApp();
 }
 </script>
