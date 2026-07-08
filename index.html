@@ -283,6 +283,9 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
     <div class="header-right">v0.1</div>
   </div>
   <div class="main">
+    <div style="text-align:center;margin-bottom:8px;">
+      <span id="data-status" style="font-size:11px;color:var(--amber);background:var(--lightAmber);border-radius:20px;padding:4px 14px;display:inline-block;">⏳ 데이터 로딩 중...</span>
+    </div>
     <div style="text-align:center;margin-bottom:28px;margin-top:8px;">
       <div style="font-size:48px;margin-bottom:10px;">♥</div>
       <div class="section-title">만날 한국어</div>
@@ -598,6 +601,90 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
 <div class="toast" id="toast-msg"></div>
 
 <script>
+// ── CSV 자동 로딩 ──────────────────────────────────────────────────────────
+const CSV_URL = 'https://raw.githubusercontent.com/johnpark236-tech/Mannal-Korean/main/data/sentences.csv';
+
+async function loadCSVData() {
+  try {
+    const res = await fetch(CSV_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const lines = text.replace(/^﻿/, '').split('\n').filter(Boolean);
+    if (lines.length < 2) throw new Error('데이터 없음');
+
+    const headers = lines[0].split(',').map(h => h.trim());
+
+    // CSV 파싱 (따옴표 처리)
+    function parseCSVLine(line) {
+      const cols = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"' && !inQ) { inQ = true; continue; }
+        if (ch === '"' && inQ && line[i+1] === '"') { cur += '"'; i++; continue; }
+        if (ch === '"' && inQ) { inQ = false; continue; }
+        if (ch === ',' && !inQ) { cols.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      cols.push(cur);
+      return cols;
+    }
+
+    const parsed = lines.slice(1).map(line => {
+      const cols = parseCSVLine(line);
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = (cols[i] || '').trim());
+      return obj;
+    }).filter(r => r.sentence_code);
+
+    if (parsed.length === 0) throw new Error('파싱된 데이터 없음');
+
+    // 전역 SENTENCES 데이터 업데이트
+    SENTENCES = parsed.map(r => ({
+      id: r.sentence_code,
+      domain: r.domain,
+      scenario: r.scenario,
+      step: parseInt(r.step_order) || 1,
+      ko1: r.korean_basic || '',
+      ko2: r.korean_standard || '',
+      ko3: r.korean_real || '',
+      trans: {
+        ko: r.korean_standard || '',
+        en: r.english || '',
+        vi: r.vietnamese || '',
+        uz: r.uzbek || '',
+        mn: r.mongolian || '',
+        zh: r.chinese || ''
+      },
+      vocab: (r.key_vocabulary || '').split('/').filter(Boolean),
+      grammar: r.grammar_pattern || '',
+      caution: r.caution || '',
+      status: r.verification_status || 'V0'
+    }));
+
+    // FIELD_DATA도 업데이트
+    FIELD_DATA = [...SENTENCES];
+
+    // 상태 표시 업데이트
+    const el = document.getElementById('data-status');
+    if (el) {
+      el.textContent = '✅ ' + SENTENCES.length + '개 문장 로딩됨';
+      el.style.background = 'var(--lightGreen)';
+      el.style.color = 'var(--green)';
+    }
+    console.log('✅ CSV 로딩 완료:', SENTENCES.length + '개');
+
+  } catch(e) {
+    console.warn('CSV 로딩 실패 — 기본 데이터 사용:', e.message);
+    const el = document.getElementById('data-status');
+    if (el) {
+      el.textContent = '⚠ 오프라인 모드 (' + SENTENCES.length + '개 기본 데이터)';
+      el.style.background = 'var(--lightAmber)';
+      el.style.color = 'var(--amber)';
+    }
+  }
+}
+
 // ── DATA ─────────────────────────────────────────────────────────────────────
 const LANG_LABELS = {ko:'한국어',vi:'Tiếng Việt',uz:"O'zbekcha",mn:'Монгол хэл',zh:'中文',en:'English'};
 let currentLang = 'ko';
@@ -1198,7 +1285,8 @@ function speakField(idx, btn){
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
-function initApp(){
+async function initApp(){
+  // 화면 먼저 표시 (로딩 중에도 첫 화면 보이게)
   document.querySelectorAll('.screen').forEach(s=>{
     s.classList.remove('active');
     s.style.display='none';
@@ -1208,6 +1296,9 @@ function initApp(){
     s1.classList.add('active');
     s1.style.display='flex';
   }
+  // CSV 데이터 로딩
+  await loadCSVData();
+  // 현장모드 초기화
   renderField();
 }
 if(document.readyState==='loading'){
