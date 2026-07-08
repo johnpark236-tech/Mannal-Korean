@@ -348,7 +348,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
 ════════════════════════════════════════════════════════════════════ -->
 <div id="s3" class="screen">
   <div class="app-header">
-    <button class="header-back" onclick="go('s2')">←</button>
+    <button class="header-back" onclick="go('s1')">←</button>
     <div class="header-brand">Mannal Korean</div>
     <div class="header-right">분야 선택</div>
   </div>
@@ -729,7 +729,6 @@ function go(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
-  if(id==='s2')renderPurposes();
   if(id==='s3')renderDomains();
   if(id==='s4')renderWeeks();
   if(id==='s5'){currentSentenceIdx=0;renderSentences();}
@@ -753,7 +752,7 @@ function selectLang(btn,code,label){
 }
 function selectLangAndGo(btn,code,label){
   selectLang(btn,code,label);
-  go('s2');
+  go('s3');
 }
 
 // ── SCREEN 2: PURPOSES ───────────────────────────────────────────────────────
