@@ -622,19 +622,23 @@ const DOMAINS = [
 ];
 
 const WEEKS = [
-  {w:1,title:'구직 기본',goal:'일자리를 찾고 있습니다',progress:100,done:true},
-  {w:2,title:'면접 표현',goal:'경험·가능 시간·희망 업무',progress:100,done:true},
-  {w:3,title:'근로계약',goal:'계약서·임금·근무시간',progress:70,done:false},
-  {w:4,title:'출근·퇴근',goal:'몇 시까지 출근하세요',progress:0,done:false},
-  {w:5,title:'작업지시',goal:'이것을 옮기세요·조립하세요',progress:0,done:false},
-  {w:6,title:'안전교육',goal:'보호구를 착용하세요',progress:0,done:false},
-  {w:7,title:'임금·급여',goal:'월급·시급·공제',progress:0,done:false},
-  {w:8,title:'휴게·휴가',goal:'쉬는 시간·연차',progress:0,done:false},
-  {w:9,title:'문제상황',goal:'지각·결근·실수',progress:0,done:false},
-  {w:10,title:'산업재해',goal:'일하다 다쳤습니다',progress:0,done:false},
-  {w:11,title:'퇴사·해고',goal:'그만두고 싶습니다',progress:0,done:false},
-  {w:12,title:'종합 롤플레이',goal:'면접·계약·현장 통합',progress:0,done:false},
+  {w:1,title:'구직 기본',goal:'일자리를 찾고 있습니다',progress:100,done:true,scenarios:['면접','구직 기본']},
+  {w:2,title:'면접 표현',goal:'경험·가능 시간·희망 업무',progress:100,done:true,scenarios:['면접']},
+  {w:3,title:'근로계약',goal:'계약서·임금·근무시간',progress:70,done:false,scenarios:['근로계약']},
+  {w:4,title:'출근·퇴근',goal:'몇 시까지 출근하세요',progress:0,done:false,scenarios:['출근','퇴근']},
+  {w:5,title:'작업지시',goal:'이것을 옮기세요·조립하세요',progress:0,done:false,scenarios:['작업지시']},
+  {w:6,title:'안전교육',goal:'보호구를 착용하세요',progress:0,done:false,scenarios:['안전교육']},
+  {w:7,title:'임금·급여',goal:'월급·시급·공제',progress:0,done:false,scenarios:['임금','임금체불']},
+  {w:8,title:'휴게·휴가',goal:'쉬는 시간·연차',progress:0,done:false,scenarios:['휴게','휴가']},
+  {w:9,title:'문제상황',goal:'지각·결근·실수',progress:0,done:false,scenarios:['갈등','기숙사']},
+  {w:10,title:'산업재해',goal:'일하다 다쳤습니다',progress:0,done:false,scenarios:['산재']},
+  {w:11,title:'퇴사·해고',goal:'그만두고 싶습니다',progress:0,done:false,scenarios:['퇴사','사업장변경']},
+  {w:12,title:'종합 롤플레이',goal:'면접·계약·현장 통합',progress:0,done:false,scenarios:['면접','근로계약','고용허가제']},
 ];
+
+function countByScenario(scenarios){
+  return SENTENCES.filter(s=>scenarios.some(sc=>s.scenario&&s.scenario.includes(sc))).length;
+}
 
 const SENTENCES = [
   {id:'JOB-001',domain:'employment',scenario:'면접',step:1,
@@ -782,16 +786,28 @@ function selectDomain(name){
 // ── SCREEN 4: WEEKS ──────────────────────────────────────────────────────────
 function renderWeeks(){
   const el=document.getElementById('week-list');
-  el.innerHTML=WEEKS.map(w=>`
+  const totalCount=SENTENCES.filter(s=>s.domain==='employment').length;
+  el.innerHTML=`
+    <div style="background:var(--lightBlue);border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:13px;font-weight:700;color:var(--navy);">📚 전체 등록 문장</span>
+      <span style="font-size:20px;font-weight:800;color:var(--blue);">${totalCount}문장</span>
+    </div>
+  `+WEEKS.map(w=>{
+    const cnt=countByScenario(w.scenarios||[]);
+    return `
     <div class="week-item ${w.done?'done':''}" onclick="go('s5')">
       <div class="week-num">${w.w}</div>
       <div class="week-info">
-        <div class="week-title">${w.title}</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="week-title">${w.title}</div>
+          <span style="background:${w.done?'var(--green)':'var(--blue)'};color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;">${cnt}문장</span>
+        </div>
         <div class="week-goal">${w.goal}</div>
         <div class="week-progress"><div class="week-progress-bar" style="width:${w.progress}%"></div></div>
       </div>
       <span class="week-arrow">${w.done?'✅':'→'}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ── SCREEN 5: SENTENCES ──────────────────────────────────────────────────────
