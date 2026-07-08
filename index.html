@@ -290,39 +290,39 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
       <div style="font-size:15px;font-weight:700;color:var(--navy);text-align:center;margin-bottom:4px;">언어를 선택하세요</div>
       <div style="font-size:13px;color:var(--gray);text-align:center;margin-bottom:16px;">Please select your language</div>
       <div class="lang-grid">
-        <button class="lang-btn selected" onclick="selectLang(this,'ko','한국어')">
+        <button class="lang-btn selected" onclick="selectLangAndGo(this,'ko','한국어')">
           <span class="lang-flag">🇰🇷</span>
           <span class="lang-native">한국어</span>
           <div class="lang-kr">Korean</div>
         </button>
-        <button class="lang-btn" onclick="selectLang(this,'vi','Tiếng Việt')">
+        <button class="lang-btn" onclick="selectLangAndGo(this,'vi','Tiếng Việt')">
           <span class="lang-flag">🇻🇳</span>
           <span class="lang-native">Tiếng Việt</span>
           <div class="lang-kr">베트남어</div>
         </button>
-        <button class="lang-btn" onclick="selectLang(this,'uz','O\'zbekcha')">
+        <button class="lang-btn" onclick="selectLangAndGo(this,'uz','O\'zbekcha')">
           <span class="lang-flag">🇺🇿</span>
           <span class="lang-native">O'zbekcha</span>
           <div class="lang-kr">우즈베크어</div>
         </button>
-        <button class="lang-btn" onclick="selectLang(this,'mn','Монгол хэл')">
+        <button class="lang-btn" onclick="selectLangAndGo(this,'mn','Монгол хэл')">
           <span class="lang-flag">🇲🇳</span>
           <span class="lang-native">Монгол хэл</span>
           <div class="lang-kr">몽골어</div>
         </button>
-        <button class="lang-btn" onclick="selectLang(this,'zh','中文')">
+        <button class="lang-btn" onclick="selectLangAndGo(this,'zh','中文')">
           <span class="lang-flag">🇨🇳</span>
           <span class="lang-native">中文</span>
           <div class="lang-kr">중국어</div>
         </button>
-        <button class="lang-btn" onclick="selectLang(this,'en','English')">
+        <button class="lang-btn" onclick="selectLangAndGo(this,'en','English')">
           <span class="lang-flag">🇺🇸</span>
           <span class="lang-native">English</span>
           <div class="lang-kr">영어</div>
         </button>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="go('s2')">시작하기 / Start ▶</button>
+    
     <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--gray);">한국어 학습 및 통역 훈련 서비스 · 법률·의료 자문 아님</div>
   </div>
 </div>
@@ -750,6 +750,10 @@ function selectLang(btn,code,label){
   btn.classList.add('selected');
   currentLang=code;currentLangLabel=label;
   document.getElementById('s2-lang').textContent=label;
+}
+function selectLangAndGo(btn,code,label){
+  selectLang(btn,code,label);
+  go('s2');
 }
 
 // ── SCREEN 2: PURPOSES ───────────────────────────────────────────────────────
