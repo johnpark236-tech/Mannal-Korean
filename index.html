@@ -398,7 +398,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
     <button class="btn btn-navy" style="margin-top:12px" onclick="go('s6')">문제 풀기 📝</button>
   </div>
   <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="selectWeek(w)"><span class="nav-icon">📖</span>학습</button>
+    <button class="nav-btn active" onclick="selectWeekByIdx(${idx})"><span class="nav-icon">📖</span>학습</button>
     <button class="nav-btn" onclick="go('s6')"><span class="nav-icon">✏️</span>문제</button>
     <button class="nav-btn" onclick="go('s9')"><span class="nav-icon">🔍</span>현장</button>
     <button class="nav-btn" onclick="go('s10')"><span class="nav-icon">👩‍🏫</span>강사</button>
@@ -410,7 +410,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
 ════════════════════════════════════════════════════════════════════ -->
 <div id="s6" class="screen">
   <div class="app-header">
-    <button class="header-back" onclick="selectWeek(w)">←</button>
+    <button class="header-back" onclick="selectWeekByIdx(${idx})">←</button>
     <div class="header-brand">Mannal Question Bank</div>
     <div class="header-right" id="q1-counter">문제 1/5</div>
   </div>
@@ -423,7 +423,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
     <div id="quiz-area"></div>
   </div>
   <nav class="bottom-nav">
-    <button class="nav-btn" onclick="selectWeek(w)"><span class="nav-icon">📖</span>학습</button>
+    <button class="nav-btn" onclick="selectWeekByIdx(${idx})"><span class="nav-icon">📖</span>학습</button>
     <button class="nav-btn active" onclick="go('s6')"><span class="nav-icon">✏️</span>문제</button>
     <button class="nav-btn" onclick="go('s9')"><span class="nav-icon">🔍</span>현장</button>
     <button class="nav-btn" onclick="go('s10')"><span class="nav-icon">👩‍🏫</span>강사</button>
@@ -448,7 +448,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
     <div id="blank-area"></div>
   </div>
   <nav class="bottom-nav">
-    <button class="nav-btn" onclick="selectWeek(w)"><span class="nav-icon">📖</span>학습</button>
+    <button class="nav-btn" onclick="selectWeekByIdx(${idx})"><span class="nav-icon">📖</span>학습</button>
     <button class="nav-btn active" onclick="go('s7')"><span class="nav-icon">✏️</span>문제</button>
     <button class="nav-btn" onclick="go('s9')"><span class="nav-icon">🔍</span>현장</button>
     <button class="nav-btn" onclick="go('s10')"><span class="nav-icon">👩‍🏫</span>강사</button>
@@ -499,7 +499,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
         <div class="review-en">Please wear safety equipment before work.</div>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="selectWeek(w)">다시 학습하기 🔄</button>
+    <button class="btn btn-primary" onclick="selectWeekByIdx(${idx})">다시 학습하기 🔄</button>
     <button class="btn btn-outline" style="margin-top:10px" onclick="go('s4')">주차 목록으로 ↩</button>
   </div>
 </div>
@@ -527,7 +527,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
     <div id="field-results"></div>
   </div>
   <nav class="bottom-nav">
-    <button class="nav-btn" onclick="selectWeek(w)"><span class="nav-icon">📖</span>학습</button>
+    <button class="nav-btn" onclick="selectWeekByIdx(${idx})"><span class="nav-icon">📖</span>학습</button>
     <button class="nav-btn" onclick="go('s6')"><span class="nav-icon">✏️</span>문제</button>
     <button class="nav-btn active" onclick="go('s9')"><span class="nav-icon">🔍</span>현장</button>
     <button class="nav-btn" onclick="go('s10')"><span class="nav-icon">👩‍🏫</span>강사</button>
@@ -584,7 +584,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
     </div>
   </div>
   <nav class="bottom-nav">
-    <button class="nav-btn" onclick="selectWeek(w)"><span class="nav-icon">📖</span>학습</button>
+    <button class="nav-btn" onclick="selectWeekByIdx(${idx})"><span class="nav-icon">📖</span>학습</button>
     <button class="nav-btn" onclick="go('s6')"><span class="nav-icon">✏️</span>문제</button>
     <button class="nav-btn" onclick="go('s9')"><span class="nav-icon">🔍</span>현장</button>
     <button class="nav-btn active" onclick="go('s10')"><span class="nav-icon">👩‍🏫</span>강사</button>
@@ -1124,6 +1124,11 @@ function selectLangAndGo(btn,code,label){
 }
 
 // ── SCREEN 2: PURPOSES ───────────────────────────────────────────────────────
+function selectWeekByIdx(idx){
+  const weeks=getCurrentWeeks();
+  const w=weeks[idx];
+  if(w) selectWeek(w);
+}
 function selectWeek(w){
   const scenarios = w.scenarios || [];
   if(scenarios.length > 0){
@@ -1179,10 +1184,10 @@ function renderWeeks(){
       <span style="font-size:13px;font-weight:700;color:var(--navy);">📚 전체 등록 문장</span>
       <span style="font-size:20px;font-weight:800;color:var(--blue);">${totalCount}문장</span>
     </div>
-  `+weeks.map(w=>{
+  `+weeks.map((w,idx)=>{
     const cnt=countByScenario(w.scenarios||[]);
     return `
-    <div class="week-item ${w.done?'done':''}" onclick="selectWeek(w)">
+    <div class="week-item ${w.done?'done':''}" onclick="selectWeekByIdx(${idx})">
       <div class="week-num">${w.w}</div>
       <div class="week-info">
         <div style="display:flex;align-items:center;gap:8px;">
