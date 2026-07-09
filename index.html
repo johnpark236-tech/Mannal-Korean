@@ -134,6 +134,9 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
   cursor:pointer;text-align:center;font-size:11px;color:var(--navy);transition:all .15s;
 }
 .action-btn:hover{border-color:var(--blue);background:var(--lightBlue);}
+.action-btn.recording{border-color:#DC2626;background:#FEE2E2;animation:recpulse 1s infinite;}
+.action-btn.recorded{border-color:var(--green);background:var(--lightGreen);}
+@keyframes recpulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 .action-btn .ab-icon{font-size:20px;display:block;margin-bottom:3px;}
 
 /* ── PROGRESS BAR TOP ───────────────────────────────────────────── */
@@ -1116,6 +1119,85 @@ function go(id){
   if(id==='s10')renderKit();
 }
 
+const LANG_BCP47={ko:'ko-KR',vi:'vi-VN',uz:'uz-UZ',mn:'mn-MN',zh:'zh-CN',en:'en-US'};
+
+function getBestVoice(bcp47){
+  const vs=speechSynthesis.getVoices();
+  return vs.find(v=>v.lang===bcp47&&v.name.includes('Google'))
+    ||vs.find(v=>v.lang===bcp47&&v.name.includes('Microsoft'))
+    ||vs.find(v=>v.lang===bcp47)||null;
+}
+
+function playOne(text,bcp47,onDone){
+  if(!text){if(onDone)onDone();return;}
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang=bcp47;
+  const v=getBestVoice(bcp47);
+  if(v)utt.voice=v;
+  let done=false;
+  const finish=()=>{if(!done){done=true;if(onDone)onDone();}};
+  utt.onend=finish;utt.onerror=finish;
+  setTimeout(finish,10000);
+  speechSynthesis.speak(utt);
+}
+
+function speakKorean(btn){
+  const pool=currentWeekSentences.length>0?currentWeekSentences:SENTENCES;
+  const s=pool[currentSentenceIdx];
+  if(!s)return;
+  if(btn)btn.disabled=true;
+  const koText=s.ko2||s.ko1||'';
+  const transText=s.trans[currentLang]||'';
+  const bcp47=LANG_BCP47[currentLang]||'ko-KR';
+  playOne(koText,'ko-KR',()=>{
+    if(!transText||currentLang==='ko'){if(btn)btn.disabled=false;return;}
+    playOne(transText,bcp47,()=>{if(btn)btn.disabled=false;});
+  });
+}
+
+var _recordings={};
+var _mediaRecorder=null;
+
+function toggleRecord(btn){
+  if(_mediaRecorder&&_mediaRecorder.state==='recording'){stopRecord(btn);}
+  else{startRecord(btn);}
+}
+
+function startRecord(btn){
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    const pool=currentWeekSentences.length>0?currentWeekSentences:SENTENCES;
+    const s=pool[currentSentenceIdx];
+    if(!s)return;
+    const sid=s.id;const chunks=[];
+    _mediaRecorder=new MediaRecorder(stream);
+    _mediaRecorder.ondataavailable=e=>chunks.push(e.data);
+    _mediaRecorder.onstop=()=>{
+      const blob=new Blob(chunks,{type:'audio/webm'});
+      if(_recordings[sid])URL.revokeObjectURL(_recordings[sid]);
+      _recordings[sid]=URL.createObjectURL(blob);
+      stream.getTracks().forEach(t=>t.stop());
+      btn.classList.remove('recording');btn.classList.add('recorded');
+      btn.querySelector('.ab-icon').textContent='✅';
+    };
+    _mediaRecorder.start();
+    btn.classList.add('recording');
+    btn.querySelector('.ab-icon').textContent='⏹';
+    setTimeout(()=>{if(_mediaRecorder&&_mediaRecorder.state==='recording')stopRecord(btn);},8000);
+  }).catch(()=>toast('마이크 권한이 필요합니다'));
+}
+
+function stopRecord(btn){
+  if(_mediaRecorder&&_mediaRecorder.state==='recording')_mediaRecorder.stop();
+}
+
+function playListen(btn){
+  const pool=currentWeekSentences.length>0?currentWeekSentences:SENTENCES;
+  const s=pool[currentSentenceIdx];
+  if(!s)return;
+  if(_recordings[s.id]){new Audio(_recordings[s.id]).play();}
+  else{speakKorean(btn);}
+}
+
 function toast(msg){
   const el=document.getElementById('toast-msg');
   el.textContent=msg;el.classList.add('show');
@@ -1259,8 +1341,8 @@ function renderSentences(){
     <div class="grammar-box">📐 ${s.grammar}</div>
     <div class="caution-box">⚠ ${s.caution}</div>
     <div class="action-row">
-      <button class="action-btn" onclick="toast('🔊 음성 재생 (v0.3에서 구현)')"><span class="ab-icon">🔊</span>듣기</button>
-      <button class="action-btn" onclick="toast('🎙 녹음 시작 (v0.3에서 구현)')"><span class="ab-icon">🎙</span>말하기</button>
+      <button class="action-btn" onclick="playListen(this)"><span class="ab-icon">🔊</span>듣기</button>
+      <button class="action-btn" onclick="toggleRecord(this)"><span class="ab-icon">🎙</span>말하기</button>
       <button class="action-btn" onclick="go('s6')"><span class="ab-icon">✏️</span>문제</button>
       <button class="action-btn" onclick="toggleFav('${s.id}',this)"><span class="ab-icon">${favs.has(s.id)?'💛':'🤍'}</span>저장</button>
     </div>
