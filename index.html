@@ -414,7 +414,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
   <div class="app-header">
     <button class="header-back" onclick="go('s5')">←</button>
     <div class="header-brand">Mannal Question Bank</div>
-    <button class="header-home" onclick="go('s1')" title="홈으로">🏠</button>
+    <div class="header-right" id="q1-counter" style="font-size:11px;color:rgba(255,255,255,.8);">문제 1/5</div>
   </div>
   <div class="main">
     <div class="progress-bar-wrap"><div class="progress-bar-fill" id="q1-progress" style="width:20%"></div></div>
@@ -1277,8 +1277,8 @@ function toggleFav(id,btn){
 function renderQuiz(){
   const total=QUIZ_DATA.length;
   const q=QUIZ_DATA[quizIdx];
-  document.getElementById('q1-counter').textContent=`문제 ${quizIdx+1}/${total}`;
-  document.getElementById('q1-progress').style.width=`${((quizIdx+1)/total)*100}%`;
+  var c1=document.getElementById('q1-counter');if(c1)c1.textContent=`문제 ${quizIdx+1}/${total}`;
+  var p1=document.getElementById('q1-progress');if(p1)p1.style.width=`${((quizIdx+1)/total)*100}%`;
   quizAnswered=false;
   document.getElementById('quiz-area').innerHTML=`
     <div class="quiz-context">${q.ctx}</div>
