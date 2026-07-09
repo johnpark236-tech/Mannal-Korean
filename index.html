@@ -1104,7 +1104,7 @@ function go(id){
   if(id==='s3')renderDomains();
   if(id==='s4')renderWeeks();
   if(id==='s5'){currentSentenceIdx=0;renderSentences();}
-  if(id==='s6'){quizIdx=0;quizScore=0;renderQuiz();}
+  if(id==='s6'){quizIdx=0;quizScore=0;generateQuizFromSentences();renderQuiz();}
   if(id==='s7'){blankIdx=0;renderBlank();}
   if(id==='s9')renderField();
   if(id==='s10')renderKit();
@@ -1274,9 +1274,26 @@ function toggleFav(id,btn){
 }
 
 // ── SCREEN 6: QUIZ ───────────────────────────────────────────────────────────
+function generateQuizFromSentences(){
+  const pool=currentWeekSentences.length>0?currentWeekSentences:SENTENCES;
+  if(!pool||pool.length===0)return;
+  const count=Math.min(5,pool.length);
+  const shuffled=pool.slice().sort(()=>Math.random()-0.5);
+  const selected=shuffled.slice(0,count);
+  window.CURRENT_QUIZ=selected.map(s=>{
+    const correct=s.trans['en']||s.trans['ko']||'';
+    const others=SENTENCES.filter(x=>x.id!==s.id&&(x.trans['en']||'').length>5);
+    const wrongOpts=others.sort(()=>Math.random()-0.5).slice(0,3).map(x=>x.trans['en']||'');
+    const ansPos=Math.floor(Math.random()*4);
+    const opts=[...wrongOpts];
+    opts.splice(ansPos,0,correct);
+    return {q:'"'+(s.ko2||s.ko1)+'"의 의미는?',opts:opts,ans:ansPos,ctx:'상황: '+(s.caution||s.scenario||'')};
+  });
+}
 function renderQuiz(){
-  const total=QUIZ_DATA.length;
-  const q=QUIZ_DATA[quizIdx];
+  const qdata=(window.CURRENT_QUIZ&&window.CURRENT_QUIZ.length>0)?window.CURRENT_QUIZ:QUIZ_DATA;
+  const total=qdata.length;
+  const q=qdata[quizIdx];
   var c1=document.getElementById('q1-counter');if(c1)c1.textContent=`문제 ${quizIdx+1}/${total}`;
   var p1=document.getElementById('q1-progress');if(p1)p1.style.width=`${((quizIdx+1)/total)*100}%`;
   quizAnswered=false;
@@ -1291,7 +1308,8 @@ function renderQuiz(){
 function answerQuiz(i){
   if(quizAnswered)return;
   quizAnswered=true;
-  const q=QUIZ_DATA[quizIdx];
+  const qdata=(window.CURRENT_QUIZ&&window.CURRENT_QUIZ.length>0)?window.CURRENT_QUIZ:QUIZ_DATA;
+  const q=qdata[quizIdx];
   const opts=document.querySelectorAll('.quiz-option');
   opts.forEach(o=>o.classList.add('disabled'));
   const fb=document.getElementById('qfb');
@@ -1308,9 +1326,9 @@ function answerQuiz(i){
   }
   setTimeout(()=>{
     quizIdx++;
-    if(quizIdx<QUIZ_DATA.length){renderQuiz();}
+    if(quizIdx<qdata.length){renderQuiz();}
     else{
-      document.getElementById('result-score').textContent=Math.round((quizScore/QUIZ_DATA.length)*100);
+      document.getElementById('result-score').textContent=Math.round((quizScore/qdata.length)*100);
       go('s8');
     }
   },1600);
