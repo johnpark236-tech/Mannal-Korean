@@ -1097,7 +1097,9 @@ let favs = new Set();
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function go(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  var target=document.getElementById(id);
+  if(!target){console.error('화면없음:',id);return;}
+  target.classList.add('active');
   window.scrollTo(0,0);
   if(id==='s3')renderDomains();
   if(id==='s4')renderWeeks();
@@ -1118,10 +1120,11 @@ function selectLang(btn,code,label){
   document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
   currentLang=code;currentLangLabel=label;
-  document.getElementById('s2-lang').textContent=label;
+  var el=document.getElementById('s2-lang');
+  if(el) el.textContent=label;
 }
 function selectLangAndGo(btn,code,label){
-  selectLang(btn,code,label);
+  try{selectLang(btn,code,label);}catch(e){currentLang=code;currentLangLabel=label;}
   go('s3');
 }
 
@@ -1408,5 +1411,6 @@ function renderKit(){
 // ── INIT ─────────────────────────────────────────────────────────────────────
 renderField();
 </script>
+<span id="s2-lang" style="display:none">한국어</span>
 </body>
 </html>
