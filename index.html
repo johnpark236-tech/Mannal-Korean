@@ -387,7 +387,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Malgun Gothic',sans-serif;back
   <div class="app-header">
     <button class="header-back" onclick="go('s4')">←</button>
     <div class="header-brand">Mannal Sentence Bank</div>
-    <button class="header-home" onclick="go('s1')" title="홈으로">🏠</button>
+    <div class="header-right" id="s5-counter" style="font-size:11px;color:rgba(255,255,255,.8);">1/1</div>
   </div>
   <div class="main">
     <div class="progress-bar-wrap"><div class="progress-bar-fill" id="sentence-progress" style="width:20%"></div></div>
@@ -1213,8 +1213,10 @@ function renderSentences(){
   const total=pool.length;
   const s=pool[currentSentenceIdx];
   if(!s)return;
-  document.getElementById('s5-counter').textContent=`${currentSentenceIdx+1}/${total}`;
-  document.getElementById('sentence-progress').style.width=`${((currentSentenceIdx+1)/total)*100}%`;
+  var ctr=document.getElementById('s5-counter');
+  if(ctr) ctr.textContent=`${currentSentenceIdx+1}/${total}`;
+  var prog=document.getElementById('sentence-progress');
+  if(prog) prog.style.width=`${((currentSentenceIdx+1)/total)*100}%`;
 
   // dots
   const dots=document.getElementById('step-dots');
